@@ -208,7 +208,7 @@ app.post('/buscarTurnosActivosPorProfesional', async (req, res) => {
     }
   
     try {
-        let turnosActivos = await buscarTurnosActivosPorProfesional(profesional);
+        let turnosActivos = await aplicacion.buscarTurnosActivosPorProfesional(profesional);
         if (!turnosActivos || turnosActivos.length === 0) {
             res.status(404).send('Turnos no encontrados.');
             return;

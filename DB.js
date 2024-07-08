@@ -25,14 +25,6 @@ function conectar() {
         });
     }
 }
-function desconectar() {
-    conexion.end(function(err) {
-        if (err) {
-            return console.log('Error al cerrar la conexión: ' + err.message);
-        }
-        console.log('Conexión cerrada.');
-    });
-}
 
 //FUNCION INSERTAR PACIENTE EN BD
 exports.insertarPaciente = function(datosPaciente){
@@ -121,7 +113,7 @@ exports.buscarProfesional = function(emailProfesional, passwordProfesional) {
 
     conectar();
 
-    const sqlQuery = "SELECT * FROM UsuarioProfesional WHERE email = ? AND password = ?";
+    const sqlQuery = "SELECT * FROM UsuarioProfesional WHERE email = ? AND password = ? AND activo = 1";
     const queryValues = [emailProfesional, passwordProfesional];
 
     return new Promise((resolve, reject) => {
