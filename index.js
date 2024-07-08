@@ -108,7 +108,6 @@ app.post('/buscarProfesionalesPorEstado', async (req, res) => {
 app.post('/profesionalActivarDesactivar', async (req, res) => {
     var profesional_email = req.body.email;
     var estadoProfesional = req.body.estado;
-    console.log(profesional_email,estadoProfesional);
 
     if (!estadoProfesional || !profesional_email) {
         res.status(400).send('Faltan parámetros: email y estado son obligatorios.');
@@ -117,6 +116,17 @@ app.post('/profesionalActivarDesactivar', async (req, res) => {
     
     aplicacion.profesionalActivarDesactivar(profesional_email,estadoProfesional);
 
+  });
+
+//ACTIVAR O CANCELAR TURNOS
+app.post('/turnoAceptarCancelar', async (req, res) => {
+    var especialidad = req.body.especialidad;
+    var dia = req.body.dia;
+    var horario = req.body.horario;
+    var profesional = req.body.profesional;
+    var accion = req.body.accion;
+    
+    aplicacion.turnoAceptarCancelar(especialidad, dia, horario, profesional, accion);
   });
 
 //ENCONTRAR TODOS LOS PROFESIONALES
@@ -177,6 +187,28 @@ app.post('/buscarTurnosActivos', async (req, res) => {
   
     try {
         let turnosActivos = await buscarTurnosActivos(emailPaciente);
+        if (!turnosActivos || turnosActivos.length === 0) {
+            res.status(404).send('Turnos no encontrados.');
+            return;
+        }
+        res.json(turnosActivos);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error al buscar turnos.');
+    }
+});
+
+//ENCONTRAR UN TURNO ACTIVO POR EMAIL DEL PACIENTE
+app.post('/buscarTurnosActivosPorProfesional', async (req, res) => {
+    var profesional = req.body.profesional;
+    
+    if (!profesional) {
+        res.status(400).send('Faltan parámetros: nombre y apellido del profesional es obligatorio.');
+        return;
+    }
+  
+    try {
+        let turnosActivos = await buscarTurnosActivosPorProfesional(profesional);
         if (!turnosActivos || turnosActivos.length === 0) {
             res.status(404).send('Turnos no encontrados.');
             return;

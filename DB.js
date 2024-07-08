@@ -210,12 +210,28 @@ exports.insertarTurno = function(datosTurno){
         if(err) throw err;});
 }
 
-//FUNCION PARA TRAER TURNOS ACTIVOS DE LA BASE DE DATOS
+//FUNCION PARA TRAER TURNOS ACTIVOS DE LA BASE DE DATOS SEGUN PACIENTE
 exports.buscarTurnosActivos = function(emailPaciente) {
     conectar();
 
     const sqlQuery = "SELECT * FROM TurnosActivos WHERE paciente = ?";
     const queryValues = [emailPaciente];
+
+    return new Promise((resolve, reject) => {
+        conexion.query(sqlQuery, queryValues, function(err, resultados) {
+            if (err) reject(err);
+            resolve(resultados);
+        });
+    });
+    
+};
+
+//FUNCION PARA TRAER TURNOS ACTIVOS DE LA BASE DE DATOS SEGUN PROFESIONAL
+exports.buscarTurnosActivosPorProfesional = function(profesional) {
+    conectar();
+
+    const sqlQuery = "SELECT * FROM TurnosActivos WHERE profesional = ?";
+    const queryValues = [profesional];
 
     return new Promise((resolve, reject) => {
         conexion.query(sqlQuery, queryValues, function(err, resultados) {
@@ -254,8 +270,6 @@ exports.buscarTurnosDisponibles = function() {
                 const profNombre = `${prof.nombre} ${prof.apellido}`;
                 const diasArray = prof.diasAtencion.split('/');
                 const diasTrabajo = obtenerFechasCorrespondientes(diasArray, 14);
-                
-                console.log(`Profesional: ${profNombre}, Días de trabajo:`, diasTrabajo); // Depuración
 
                 diasTrabajo.forEach(dia => {
                     for (let hora = horarioInicio; hora < horarioFin; hora++) {
@@ -267,7 +281,6 @@ exports.buscarTurnosDisponibles = function() {
                             horario: horario,
                             profesional: profNombre
                         };
-                        console.log('Turno generado:', turno); // Depuración
                         turnosDeProfesionales.push(turno);
                     }
                 });
@@ -285,6 +298,30 @@ exports.buscarTurnosDisponibles = function() {
             resolve(turnosDisponibles);
             });
         });
+    });
+};
+
+//ACEPTAR, CANCELAR O RECHAZAR UN TURNO
+exports.turnoAceptarCancelar = function(especialidad, dia, horario, profesional, accion){
+
+    conectar();
+
+    let sqlQuery;
+    const queryValues = [especialidad, dia, horario, profesional];
+
+    if (accion === -1) {
+        sqlQuery = "DELETE FROM TurnosActivos WHERE especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
+    } else if (accion === 0) {
+        sqlQuery = "UPDATE TurnosActivos SET estado = 0 WHERE especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
+    } else if (accion === 1) {
+        sqlQuery = "UPDATE TurnosActivos SET estado = 1 WHERE especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
+    } else {
+        throw new Error("Acción inválida. La acción debe ser -1, 0, o 1.");
+    }
+
+    conexion.query(sqlQuery, queryValues, function(err) {
+        auditarCambio();
+        if (err) throw err;
     });
 };
 
