@@ -51,7 +51,7 @@ exports.insertarPaciente = function(datosPaciente){
 //FUNCION INSERTAR PROFESIONAL EN BD
 exports.insertarProfesional = function(datosProfesional){
     
-    var sqlQuery = 'insert into UsuarioProfesional (nombre,apellido,dni,email,password,foto,especialidad,diasAtencion,fotoEsp)';
+    var sqlQuery = 'insert into UsuarioProfesional (nombre,apellido,dni,email,password,foto,especialidad,diasAtencion,inicioAtencion,finAtencion,fotoEsp)';
     var queryValues = " values (" +
         "'" + datosProfesional.nombre + "'," +
         "'" + datosProfesional.apellido + "'," +
@@ -61,6 +61,8 @@ exports.insertarProfesional = function(datosProfesional){
         "'" + datosProfesional.foto + "'," +
         "'" + datosProfesional.especialidad + "'," +
         "'" + datosProfesional.diasAtencion + "'," +
+        "'" + datosProfesional.inicioAtencion + "'," +
+        "'" + datosProfesional.finAtencion + "'," +
         "'" + datosProfesional.fotoEsp + "')";
 
     var sql = sqlQuery + queryValues;
@@ -234,7 +236,7 @@ exports.buscarTurnosActivosPorProfesional = function(profesional) {
     
 };
 
-// FUNCIÓN PARA BUSCAR TODOS LOS TURNOS DISPONIBLES
+// FUNCIÓN PARA BUSCAR TODOS LOS TURNOS DISPONIBLES SEGUN CHAT
 exports.buscarTurnosDisponibles = function() {
     conectar();
 
@@ -250,44 +252,66 @@ exports.buscarTurnosDisponibles = function() {
 
             conexion.query(sqlQueryTurnosActivos, function(err, turnosActivos) {
                 if (err) {
-                reject(err);
-                return;
-            }
+                    reject(err);
+                    return;
+                }
 
-            const turnosDeProfesionales = [];
-            const horarioInicio = 9;
-            const horarioFin = 16;
+                const turnosDeProfesionales = [];
 
-            profesionales.forEach(prof => {
-                const profNombre = `${prof.nombre} ${prof.apellido}`;
-                const diasArray = prof.diasAtencion.split('/');
-                const diasTrabajo = obtenerFechasCorrespondientes(diasArray, 14);
+                profesionales.forEach(prof => {
+                    const profNombre = `${prof.nombre} ${prof.apellido}`;
+                    const diasArray = prof.diasAtencion.split('/');
+                    const diasTrabajo = obtenerFechasCorrespondientes(diasArray, 14);
+                    const horariosInicio = prof.inicioAtencion.split('/');
+                    const horariosFin = prof.finAtencion.split('/');
 
-                diasTrabajo.forEach(dia => {
-                    for (let hora = horarioInicio; hora < horarioFin; hora++) {
-                        const horario = `${hora}:00`;
-                        const turno = {
-                            paciente: '',
-                            especialidad: prof.especialidad,
-                            dia: dia,
-                            horario: horario,
-                            profesional: profNombre
-                        };
-                        turnosDeProfesionales.push(turno);
-                    }
+                    diasTrabajo.forEach((dia, index) => {
+
+                        let indexdia = index;
+                        if (indexdia > (diasTrabajo.length/2 -1)) {indexdia = indexdia - diasTrabajo.length/2};
+
+                        let [inicioHora, inicioMinuto] = horariosInicio[indexdia].split(':');
+                        let [finHora, finMinuto] = horariosFin[indexdia].split(':');
+
+                        //console.log(dia + ' desde ' + inicioHora + ':' + inicioMinuto + ' hasta ' + finHora + ':' + finMinuto);
+
+                        let horaActual = inicioHora;
+                        let minutoActual = inicioMinuto;
+
+                        //Generar todos los turnos posibles de 30'
+                        while (
+                            Number(horaActual) < Number(finHora) || 
+                            (Number(horaActual.map) === Number(finHora) && Number(minutoActual) < Number(finMinuto)) //No pasarse de hora
+                        ) {
+                            const horario = `${horaActual}:${minutoActual}`;
+                            const turno = {
+                                paciente: '',
+                                especialidad: prof.especialidad,
+                                dia: dia,
+                                horario: horario,
+                                profesional: profNombre
+                            };
+                            turnosDeProfesionales.push(turno);
+
+                            if (minutoActual === '30') {
+                                minutoActual = '00';
+                                h = Number(horaActual) +1;
+                                horaActual = h.toString().padStart(2, '0');
+                            } else {minutoActual = '30'};
+                        }
+                    });
                 });
-            });
 
-            const turnosDisponibles = turnosDeProfesionales.filter(turno => {
-                return !turnosActivos.some(tactivo => {
-                    return tactivo.especialidad === turno.especialidad &&
-                            tactivo.dia === turno.dia &&
-                            tactivo.horario === turno.horario &&
-                            tactivo.profesional === turno.profesional;
+                const turnosDisponibles = turnosDeProfesionales.filter(turno => {
+                    return !turnosActivos.some(tactivo => {
+                        return tactivo.especialidad === turno.especialidad &&
+                                tactivo.dia === turno.dia &&
+                                tactivo.horario === turno.horario &&
+                                tactivo.profesional === turno.profesional;
+                    });
                 });
-            });
 
-            resolve(turnosDisponibles);
+                resolve(turnosDisponibles);
             });
         });
     });
