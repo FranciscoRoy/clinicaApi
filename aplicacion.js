@@ -54,8 +54,8 @@ exports.profesionalActivarDesactivar = function(emailProfesional,estadoProfesion
     db.profesionalActivarDesactivar(emailProfesional,estadoProfesional);
 };
 
-exports.turnoAceptarCancelar = function(especialidad, dia, horario, profesional, accion){
-    db.turnoAceptarCancelar(especialidad, dia, horario, profesional, accion);
+exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, profesional, accion){
+    db.turnoAceptarCancelar(paciente, especialidad, dia, horario, profesional, accion);
 }
 
 exports.buscarGerente = async function(emailGerente, passwordGerente){
@@ -70,6 +70,16 @@ exports.buscarGerente = async function(emailGerente, passwordGerente){
 
 exports.insertarTurno = function(datosTurno){
     db.insertarTurno(datosTurno);
+}
+
+exports.buscarTodosTurnosActivos = async function(){
+    try {
+        var todosTurnosActivos = await db.buscarTodosTurnosActivos();
+        return todosTurnosActivos;
+    } catch (error) {
+        console.error('Error al buscar turnos:', error);
+        throw error;
+    }
 }
 
 exports.buscarTurnosActivos = async function(emailPaciente){

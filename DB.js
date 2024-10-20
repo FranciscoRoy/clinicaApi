@@ -208,6 +208,20 @@ exports.insertarTurno = function(datosTurno){
         if(err) throw err;});
 }
 
+//FUNCION PARA TRAER TODOS LOS TURNOS ACTIVOS
+exports.buscarTodosTurnosActivos = function() {
+    conectar();
+
+    const sqlQuery = "SELECT * FROM TurnosActivos";
+
+    return new Promise((resolve, reject) => {
+        conexion.query(sqlQuery, function(err, resultados) {
+            if (err) reject(err);
+            resolve(resultados);
+        });
+    });
+};
+
 //FUNCION PARA TRAER TURNOS ACTIVOS DE LA BASE DE DATOS SEGUN PACIENTE
 exports.buscarTurnosActivos = function(emailPaciente) {
     conectar();
@@ -322,19 +336,21 @@ exports.buscarTurnosDisponibles = function() {
 };
 
 //ACEPTAR, CANCELAR O RECHAZAR UN TURNO
-exports.turnoAceptarCancelar = function(especialidad, dia, horario, profesional, accion){
+exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, profesional, accion){
 
     conectar();
 
     let sqlQuery;
-    const queryValues = [especialidad, dia, horario, profesional];
+    let sqlQuery2;
+    const queryValues = [paciente, especialidad, dia, horario, profesional];
 
     if (accion === -1) {
-        sqlQuery = "DELETE FROM TurnosActivos WHERE especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
+        sqlQuery = "INSERT INTO TurnosFinalizados (paciente, especialidad, dia, horario, profesional, tipoFinalizacion) VALUES (?, ?, ?, ?, ?, -1)";
+        sqlQuery2 = "DELETE FROM TurnosActivos WHERE paciente = ? AND especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
     } else if (accion === 0) {
-        sqlQuery = "UPDATE TurnosActivos SET estado = 0 WHERE especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
+        sqlQuery = "UPDATE TurnosActivos SET estado = 0 WHERE paciente = ? AND especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
     } else if (accion === 1) {
-        sqlQuery = "UPDATE TurnosActivos SET estado = 1 WHERE especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
+        sqlQuery = "UPDATE TurnosActivos SET estado = 1 WHERE paciente = ? AND especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
     } else {
         throw new Error("Acción inválida. La acción debe ser -1, 0, o 1.");
     }
@@ -343,6 +359,14 @@ exports.turnoAceptarCancelar = function(especialidad, dia, horario, profesional,
         auditarCambio();
         if (err) throw err;
     });
+
+    if(sqlQuery2){
+        conexion.query(sqlQuery2, queryValues, function(err) {
+            auditarCambio();
+            if (err) throw err;
+        });
+    }
+    
 };
 
 function obtenerNombreDiaEnEspanol(dia) {

@@ -120,13 +120,14 @@ app.post('/profesionalActivarDesactivar', async (req, res) => {
 
 //ACTIVAR O CANCELAR TURNOS
 app.post('/turnoAceptarCancelar', async (req, res) => {
+    var paciente = req.body.paciente;
     var especialidad = req.body.especialidad;
     var dia = req.body.dia;
     var horario = req.body.horario;
     var profesional = req.body.profesional;
     var accion = req.body.accion;
     
-    aplicacion.turnoAceptarCancelar(especialidad, dia, horario, profesional, accion);
+    aplicacion.turnoAceptarCancelar(paciente, especialidad, dia, horario, profesional, accion);
   });
 
 //ENCONTRAR TODOS LOS PROFESIONALES
@@ -175,6 +176,22 @@ app.post('/insertarTurno', (req) =>{
     var datosTurno = req.body;
     aplicacion.insertarTurno(datosTurno);
 })
+
+//ENCONTRAR TODOS LOS TURNOS ACTIVOS
+app.post('/buscarTodosTurnosActivos', async (req, res) => {
+  
+    try {
+        let todosTurnosActivos = await buscarTodosTurnosActivos();
+        if (!todosTurnosActivos || todosTurnosActivos.length === 0) {
+            res.status(404).send('Turnos no encontrados.');
+            return;
+        }
+        res.json(todosTurnosActivos);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error al buscar turnos.');
+    }
+});
 
 //ENCONTRAR UN TURNO ACTIVO POR EMAIL DEL PACIENTE
 app.post('/buscarTurnosActivos', async (req, res) => {
@@ -255,16 +272,6 @@ async function buscarPaciente(emailPaciente, passwordPaciente) {
   }
 }
 
-async function buscarNombresPaciente(emailPaciente) {
-    try {
-        let nombresEncontrados = await aplicacion.buscarNombresPaciente(emailPaciente);
-        return nombresEncontrados;
-    } catch (error) {
-        console.error('Error en buscarPaciente:', error);
-        throw error;
-    }
-  }
-
 async function buscarProfesionalPorEmailyPass(emailProfesional, passwordProfesional) {
     try {
         let profesionalEncontrado = await aplicacion.buscarProfesional(emailProfesional, passwordProfesional);
@@ -293,6 +300,16 @@ async function buscarGerente(emailGerente, passwordGerente) {
       console.error('Error en buscarGerente:', error);
       throw error;
   }
+}
+
+async function buscarTodosTurnosActivos() {
+    try {
+        let todosTurnosActivos = await aplicacion.buscarTodosTurnosActivos();
+        return todosTurnosActivos;
+    } catch (error) {
+        console.error('Error al buscar turnos:', error);
+        throw error;
+    }
 }
 
 async function buscarTurnosActivos(emailPaciente) {
