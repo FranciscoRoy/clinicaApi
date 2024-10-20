@@ -165,10 +165,14 @@ exports.buscarTodosProfesionales = function(estado) {
 //ACTIVAR O DESACTIVAR UN PROFESIONAL
 exports.profesionalActivarDesactivar = function(emailProfesional,estadoProfesional){
 
+    let estadoActualizado = estadoProfesional;
+    if (estadoProfesional != 1) {estadoActualizado = 0};
+
     conectar();
 
+
     const sqlQuery = "UPDATE UsuarioProfesional SET activo = ? WHERE email = ?";
-    const queryValues = [estadoProfesional, emailProfesional];
+    const queryValues = [estadoActualizado, emailProfesional];
 
     conexion.query(sqlQuery, queryValues, function(err) {
         auditarCambio();
