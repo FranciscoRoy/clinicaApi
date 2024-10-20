@@ -198,7 +198,7 @@ app.post('/buscarTurnosActivos', async (req, res) => {
     }
 });
 
-//ENCONTRAR UN TURNO ACTIVO POR EMAIL DEL PACIENTE
+//ENCONTRAR UN TURNO ACTIVO POR PROFESIONAL
 app.post('/buscarTurnosActivosPorProfesional', async (req, res) => {
     var profesional = req.body.profesional;
     
@@ -254,6 +254,16 @@ async function buscarPaciente(emailPaciente, passwordPaciente) {
       throw error;
   }
 }
+
+async function buscarNombresPaciente(emailPaciente) {
+    try {
+        let nombresEncontrados = await aplicacion.buscarNombresPaciente(emailPaciente);
+        return nombresEncontrados;
+    } catch (error) {
+        console.error('Error en buscarPaciente:', error);
+        throw error;
+    }
+  }
 
 async function buscarProfesionalPorEmailyPass(emailProfesional, passwordProfesional) {
     try {

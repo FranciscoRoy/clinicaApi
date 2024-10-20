@@ -240,7 +240,7 @@ exports.buscarTurnosActivosPorProfesional = function(profesional) {
     
 };
 
-// FUNCIÓN PARA BUSCAR TODOS LOS TURNOS DISPONIBLES SEGUN CHAT
+// FUNCIÓN PARA BUSCAR TODOS LOS TURNOS DISPONIBLES
 exports.buscarTurnosDisponibles = function() {
     conectar();
 
