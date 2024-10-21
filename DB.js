@@ -277,9 +277,9 @@ exports.calificarProfesional = function(turno, calificacion) {
         profesionalParaCalificar = resultados[0];
 
         puntuacionTotal = profesionalParaCalificar.cantServicios * profesionalParaCalificar.puntuacion;
-        puntuacionTotal = puntuacionTotal + calificacion;
-        cantidadNueva = profesionalParaCalificar.cantServicios + 1;
-        puntuacionNueva = puntuacionTotal / cantidadNueva;
+        puntuacionTotal = puntuacionTotal + (calificacion*100);
+        cantidadNueva = 1+ profesionalParaCalificar.cantServicios;
+        puntuacionNueva = Math.round(puntuacionTotal / cantidadNueva);
 
         const sqlQuery2 = `UPDATE UsuarioProfesional SET cantServicios = ?, puntuacion = ? WHERE email = ?`;
         const queryValues2 = [cantidadNueva, puntuacionNueva, profesionalParaCalificar.email];
@@ -299,7 +299,17 @@ exports.calificarProfesional = function(turno, calificacion) {
                     return;
                 }
 
+                const sqlQuery4 = `UPDATE UsuarioPaciente SET valPend = valPend - 1 WHERE email = ?`;
+                const queryValues4 = [turno.paciente];
+
+                conexion.query(sqlQuery4, queryValues4, function(err) {
+                if (err) {
+                    console.error('Error al actualizar el paciente:', err);
+                    return;
+                }
+                
                 auditarCambio();
+                });
             });
         });
     });
