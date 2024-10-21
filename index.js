@@ -215,6 +215,28 @@ app.post('/buscarTurnosActivos', async (req, res) => {
     }
 });
 
+//ENCONTRAR TURNOS FINALIZADOS POR EMAIL DEL PACIENTE
+app.post('/buscarTurnosFinalizadosPaciente', async (req, res) => {
+    var emailPaciente = req.body.email;
+    
+    if (!emailPaciente) {
+        res.status(400).send('Faltan parámetros: email es obligatorio.');
+        return;
+    }
+  
+    try {
+        let turnosFinalizados = await aplicacion.buscarTurnosFinalizadosPaciente(emailPaciente);
+        if (!turnosFinalizados || turnosFinalizados.length === 0) {
+            res.status(404).send('Turnos no encontrados.');
+            return;
+        }
+        res.json(turnosFinalizados);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error al buscar turnos.');
+    }
+});
+
 //ENCONTRAR UN TURNO ACTIVO POR PROFESIONAL
 app.post('/buscarTurnosActivosPorProfesional', async (req, res) => {
     var profesional = req.body.profesional;
@@ -251,6 +273,14 @@ app.post('/buscarTurnosDisponibles', async (req, res) => {
         res.status(500).send('Error al buscar turnos.');
     }
 });
+
+//CALIFICAR PROFESIONALES
+app.post('/calificarProfesional', async (req, res) => {
+    var turno = req.body.turno;
+    var calificacion = req.body.calificacion;
+    
+    aplicacion.calificarProfesional(turno, calificacion);
+  });
 
 async function buscarTodosProfesionales(estado) {
     try {

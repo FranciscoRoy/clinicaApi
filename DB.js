@@ -142,7 +142,7 @@ exports.buscarProfesionalPorEstado = function(estadoProfesional) {
     });
 };
 
-//FUNCION PARA TRAER PROFESIONALES DE LA BD SEGUN ACTIVIDAD (0 no activo, 1 activo)
+//FUNCION PARA TRAER TODOS LOS PROFESIONALES DE LA BD SEGUN ACTIVIDAD (0 no activo, 1 activo)
 exports.buscarTodosProfesionales = function(estado) {
     var estadoProf = 1;
     if(estado !== 1) {estadoProf = 0};
@@ -234,8 +234,75 @@ exports.buscarTurnosActivos = function(emailPaciente) {
             if (err) reject(err);
             resolve(resultados);
         });
+    }); 
+};
+
+//FUNCION PARA TRAER TURNOS FINALIZADOS SIN CALIFICAR POR EL PACIENTE DE LA BASE DE DATOS
+exports.buscarTurnosFinalizadosPaciente = function(emailPaciente) {
+    conectar();
+
+    const sqlQuery = "SELECT * FROM TurnosFinalizados WHERE paciente = ? AND tipoFinalizacion != -1 AND estadoPaciente = 0";
+    const queryValues = [emailPaciente];
+
+    return new Promise((resolve, reject) => {
+        conexion.query(sqlQuery, queryValues, function(err, resultados) {
+            if (err) reject(err);
+            resolve(resultados);
+        });
+    }); 
+};
+
+//FUNCION CALIFICAR PROFESIONAL
+exports.calificarProfesional = function(turno, calificacion) {
+
+    let profesionalParaCalificar;
+    let puntuacionTotal;
+    let cantidadNueva;
+    let puntuacionNueva;
+
+    conectar();
+
+    const sqlQuery = `SELECT * FROM UsuarioProfesional WHERE CONCAT(nombre, ' ', apellido) = ?`;
+
+    conexion.query(sqlQuery, [turno.profesional], function(err, resultados) {
+        if (err) {
+            console.error('Error al buscar al profesional:', err);
+            return;
+        }
+        if (resultados.length === 0) {
+            console.error('Profesional no encontrado');
+            return;
+        }
+
+        profesionalParaCalificar = resultados[0];
+
+        puntuacionTotal = profesionalParaCalificar.cantServicios * profesionalParaCalificar.puntuacion;
+        puntuacionTotal = puntuacionTotal + calificacion;
+        cantidadNueva = profesionalParaCalificar.cantServicios + 1;
+        puntuacionNueva = puntuacionTotal / cantidadNueva;
+
+        const sqlQuery2 = `UPDATE UsuarioProfesional SET cantServicios = ?, puntuacion = ? WHERE email = ?`;
+        const queryValues2 = [cantidadNueva, puntuacionNueva, profesionalParaCalificar.email];
+
+        conexion.query(sqlQuery2, queryValues2, function(err) {
+            if (err) {
+                console.error('Error al actualizar al profesional:', err);
+                return;
+            }
+
+            const sqlQuery3 = `UPDATE TurnosFinalizados SET estadoPaciente = 1 WHERE paciente = ? AND profesional = ?`;
+            const queryValues3 = [turno.paciente, turno.profesional];
+
+            conexion.query(sqlQuery3, queryValues3, function(err) {
+                if (err) {
+                    console.error('Error al actualizar el turno:', err);
+                    return;
+                }
+
+                auditarCambio();
+            });
+        });
     });
-    
 };
 
 //FUNCION PARA TRAER TURNOS ACTIVOS DE LA BASE DE DATOS SEGUN PROFESIONAL
@@ -290,8 +357,6 @@ exports.buscarTurnosDisponibles = function() {
 
                         let [inicioHora, inicioMinuto] = horariosInicio[indexdia].split(':');
                         let [finHora, finMinuto] = horariosFin[indexdia].split(':');
-
-                        //console.log(dia + ' desde ' + inicioHora + ':' + inicioMinuto + ' hasta ' + finHora + ':' + finMinuto);
 
                         let horaActual = inicioHora;
                         let minutoActual = inicioMinuto;
@@ -351,6 +416,10 @@ exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, pr
         sqlQuery = "UPDATE TurnosActivos SET estado = 0 WHERE paciente = ? AND especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
     } else if (accion === 1) {
         sqlQuery = "UPDATE TurnosActivos SET estado = 1 WHERE paciente = ? AND especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
+    } else if (accion === 2) {
+        sqlQuery = "INSERT INTO TurnosFinalizados (paciente, especialidad, dia, horario, profesional, tipoFinalizacion) VALUES (?, ?, ?, ?, ?, 1)";
+        sqlQuery2 = "DELETE FROM TurnosActivos WHERE paciente = ? AND especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
+        agregarValoracionPendiente(paciente);
     } else {
         throw new Error("Acción inválida. La acción debe ser -1, 0, o 1.");
     }
@@ -368,6 +437,30 @@ exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, pr
     }
     
 };
+
+function agregarValoracionPendiente(emailPaciente) {
+    let nuevoTotal = 0;
+
+    conectar();
+
+    const sqlQuery = "SELECT valPend FROM UsuarioPaciente WHERE email = ?";
+    const queryValues = [emailPaciente];
+
+    conexion.query(sqlQuery, queryValues, function(err, resultados) {
+        if (err) reject(err);
+        resolve(resultados);
+    });
+
+    nuevoTotal = resultados +1;
+
+    const sqlQuery2 = "UPDATE UsuarioPaciente SET valPend = ? WHERE email = ?";
+    const queryValues2 = [nuevoTotal, emailPaciente];
+
+    conexion.query(sqlQuery2, queryValues2, function(err) {
+        if (err) reject(err);
+    });
+
+}
 
 function obtenerNombreDiaEnEspanol(dia) {
     const diasEnEspanol = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
