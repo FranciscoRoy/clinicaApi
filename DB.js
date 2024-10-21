@@ -411,7 +411,7 @@ exports.buscarTurnosDisponibles = function() {
 };
 
 //ACEPTAR, CANCELAR O RECHAZAR UN TURNO
-exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, profesional, accion){
+exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, profesional, accion, resena){
 
     conectar();
 
@@ -429,6 +429,7 @@ exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, pr
     } else if (accion === 2) {
         sqlQuery = "INSERT INTO TurnosFinalizados (paciente, especialidad, dia, horario, profesional, tipoFinalizacion) VALUES (?, ?, ?, ?, ?, 1)";
         sqlQuery2 = "DELETE FROM TurnosActivos WHERE paciente = ? AND especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
+        escribirResena(paciente, profesional, dia, resena);
         agregarValoracionPendiente(paciente);
     } else {
         throw new Error("Acción inválida. La acción debe ser -1, 0, o 1.");
@@ -448,6 +449,17 @@ exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, pr
     
 };
 
+function escribirResena(paciente, profesional, dia, resena){
+    const sqlQuery = "INSERT INTO resenasPacientes (paciente, profesional, dia, comentario) VALUES (?, ?, ?, ?)";
+    const queryValues = [paciente, profesional, dia, resena];
+
+    conectar();
+    conexion.query(sqlQuery, queryValues, function(err) {
+        auditarCambio();
+        if (err) throw err;
+    });
+}
+
 function agregarValoracionPendiente(emailPaciente) {
     let nuevoTotal = 0;
 
@@ -459,17 +471,16 @@ function agregarValoracionPendiente(emailPaciente) {
     conexion.query(sqlQuery, queryValues, function(err, resultados) {
         if (err) reject(err);
         resolve(resultados);
+
+        nuevoTotal = resultados +1;
+
+        const sqlQuery2 = "UPDATE UsuarioPaciente SET valPend = ? WHERE email = ?";
+        const queryValues2 = [nuevoTotal, emailPaciente];
+
+        conexion.query(sqlQuery2, queryValues2, function(err) {
+            if (err) reject(err);
+        });
     });
-
-    nuevoTotal = resultados +1;
-
-    const sqlQuery2 = "UPDATE UsuarioPaciente SET valPend = ? WHERE email = ?";
-    const queryValues2 = [nuevoTotal, emailPaciente];
-
-    conexion.query(sqlQuery2, queryValues2, function(err) {
-        if (err) reject(err);
-    });
-
 }
 
 function obtenerNombreDiaEnEspanol(dia) {

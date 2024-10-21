@@ -126,8 +126,9 @@ app.post('/turnoAceptarCancelar', async (req, res) => {
     var horario = req.body.horario;
     var profesional = req.body.profesional;
     var accion = req.body.accion;
+    var resena = req.body.resena;
     
-    aplicacion.turnoAceptarCancelar(paciente, especialidad, dia, horario, profesional, accion);
+    aplicacion.turnoAceptarCancelar(paciente, especialidad, dia, horario, profesional, accion, resena);
   });
 
 //ENCONTRAR TODOS LOS PROFESIONALES

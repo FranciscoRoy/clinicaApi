@@ -54,8 +54,8 @@ exports.profesionalActivarDesactivar = function(emailProfesional,estadoProfesion
     db.profesionalActivarDesactivar(emailProfesional,estadoProfesional);
 };
 
-exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, profesional, accion){
-    db.turnoAceptarCancelar(paciente, especialidad, dia, horario, profesional, accion);
+exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, profesional, accion, resena){
+    db.turnoAceptarCancelar(paciente, especialidad, dia, horario, profesional, accion, resena);
 }
 
 exports.calificarProfesional = function(turno, calificacion){
