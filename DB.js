@@ -42,7 +42,7 @@ exports.insertarPaciente = function(datosPaciente){
     conectar();
     
     conexion.query(sql,function(err){
-        auditarCambio();
+        auditarCambio("Se registró el usuario paciente "+datosPaciente.email);
         if(err) throw err;});
     
     //sql= sql + "'" + md5("clavesupersecreta" + datosPaciente.pass) + "')"; sin implementar
@@ -70,7 +70,7 @@ exports.insertarProfesional = function(datosProfesional){
     conectar();
     
     conexion.query(sql,function(err){
-        auditarCambio();
+        auditarCambio("Se registró el usuario profesional "+datosProfesional.email);
         if(err) throw err;});
 }
 //FUNCION INSERTAR GERENTE EN BD
@@ -90,7 +90,7 @@ exports.insertarGerente = function(datosGerente){
     conectar();
     
     conexion.query(sql,function(err){
-        auditarCambio();
+        auditarCambio("Se registró el usuario gerente "+datosGerente.email);
         if(err) throw err;});
 }
 
@@ -175,7 +175,7 @@ exports.profesionalActivarDesactivar = function(emailProfesional,estadoProfesion
     const queryValues = [estadoActualizado, emailProfesional];
 
     conexion.query(sqlQuery, queryValues, function(err) {
-        auditarCambio();
+        auditarCambio("Se modifico a "+estadoActualizado+" el estado del profesional "+emailProfesional);
         if (err) throw err;});
 };
 
@@ -205,6 +205,7 @@ exports.insertarTurno = function(datosTurno){
     conectar();
     
     conexion.query(sqlQuery, queryValues, function(err){
+        auditarCambio("Se solicitó el turno: "+datosTurno.especialidad+" "+datosTurno.dia+" "+datosTurno.horario+" con "+datosTurno.profesional+" para el paciente "+datosTurno.paciente);
         if(err) throw err;});
 }
 
@@ -422,6 +423,7 @@ exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, pr
     if (accion === -1) {
         sqlQuery = "INSERT INTO TurnosFinalizados (paciente, especialidad, dia, horario, profesional, tipoFinalizacion) VALUES (?, ?, ?, ?, ?, -1)";
         sqlQuery2 = "DELETE FROM TurnosActivos WHERE paciente = ? AND especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
+        auditarCambio("Se canceló el turno del paciente "+paciente+" con el profesional "+profesional);
     } else if (accion === 0) {
         sqlQuery = "UPDATE TurnosActivos SET estado = 0 WHERE paciente = ? AND especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
     } else if (accion === 1) {
@@ -431,18 +433,17 @@ exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, pr
         sqlQuery2 = "DELETE FROM TurnosActivos WHERE paciente = ? AND especialidad = ? AND dia = ? AND horario = ? AND profesional = ?";
         escribirResena(paciente, profesional, dia, resena);
         agregarValoracionPendiente(paciente);
+        auditarCambio("Se finalizó el turno del paciente "+paciente+" con el profesional "+profesional);
     } else {
         throw new Error("Acción inválida. La acción debe ser -1, 0, o 1.");
     }
 
     conexion.query(sqlQuery, queryValues, function(err) {
-        auditarCambio();
         if (err) throw err;
     });
 
     if(sqlQuery2){
         conexion.query(sqlQuery2, queryValues, function(err) {
-            auditarCambio();
             if (err) throw err;
         });
     }
@@ -455,7 +456,7 @@ function escribirResena(paciente, profesional, dia, resena){
 
     conectar();
     conexion.query(sqlQuery, queryValues, function(err) {
-        auditarCambio();
+        auditarCambio("El profesional "+profesional+" agregó una reseña del paciente "+paciente);
         if (err) throw err;
     });
 }
@@ -507,19 +508,25 @@ function obtenerFechasCorrespondientes(dias, cantidadDias) {
     return fechasCorrespondientes;
 }
 
-//PARA AGREGAR AUDITORIA EN EL FUTURO (SIN EXPORT, FUNCIONA SOLO EN BD)
-async function auditarCambio() {
-    var textoCambio = 'Aca se realizo un cambio significativo';
+//PARA AGREGAR AUDITORIA EN EL FUTURO (SIN EXPORT, FUNCIONA SOLO EN BD, USUARIO RESPONSABLE SIN IMPLEMENTAR)
+async function auditarCambio(cambio, usuario = null) {
+    var textoCambio = cambio;
     
+    var usuarioLog = usuario || 'Sistema';
     var fecha = new Date();
     var nombreDia = obtenerNombreDiaEnEspanol(fecha.getDay());
     var numeroDia = fecha.getDate();
+    var hora = String(fecha.getHours() -3).padStart(2, '0');
+    var minutos = String(fecha.getMinutes()).padStart(2, '0');
     var fechaFormateada = nombreDia + ' ' + numeroDia;
+    var horaFormateada = `${hora}:${minutos}`;
 
-    var consulta_p1 = "INSERT INTO auditoria (cambio, fecha)";
+    var consulta_p1 = "INSERT INTO auditoria (fecha, hora, usuario, cambio)";
     var consulta_p2 = " values ("+
-        "'" + textoCambio + "'," +
-        "'" + fechaFormateada + "')";
+        "'" + fechaFormateada + "'," +
+        "'" + horaFormateada + "'," +
+        "'" + usuarioLog + "'," +
+        "'" + textoCambio + "')";
 
     var consultaSql = consulta_p1 + consulta_p2;
 
