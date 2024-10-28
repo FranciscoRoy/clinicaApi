@@ -248,6 +248,7 @@ exports.buscarTurnosFinalizadosPaciente = function(emailPaciente) {
     return new Promise((resolve, reject) => {
         conexion.query(sqlQuery, queryValues, function(err, resultados) {
             if (err) reject(err);
+            if (!resultados) resolve(null);
             resolve(resultados);
         });
     }); 
@@ -435,7 +436,7 @@ exports.turnoAceptarCancelar = function(paciente, especialidad, dia, horario, pr
         agregarValoracionPendiente(paciente);
         auditarCambio("Se finalizó el turno del paciente "+paciente+" con el profesional "+profesional);
     } else {
-        throw new Error("Acción inválida. La acción debe ser -1, 0, o 1.");
+        throw new Error("Acción inválida. La acción debe ser -1, 0, 1 o 2.");
     }
 
     conexion.query(sqlQuery, queryValues, function(err) {
@@ -462,24 +463,31 @@ function escribirResena(paciente, profesional, dia, resena){
 }
 
 function agregarValoracionPendiente(emailPaciente) {
-    let nuevoTotal = 0;
+    return new Promise((resolve, reject) => {
+        let nuevoTotal = 0;
 
-    conectar();
+        conectar();
 
-    const sqlQuery = "SELECT valPend FROM UsuarioPaciente WHERE email = ?";
-    const queryValues = [emailPaciente];
+        const sqlQuery = "SELECT valPend FROM UsuarioPaciente WHERE email = ?";
+        const queryValues = [emailPaciente];
 
-    conexion.query(sqlQuery, queryValues, function(err, resultados) {
-        if (err) reject(err);
-        resolve(resultados);
+        conexion.query(sqlQuery, queryValues, function(err, resultados) {
+            if (err) {
+                reject(err);
+            } else {
+                nuevoTotal = resultados[0].valPend + 1;
 
-        nuevoTotal = resultados +1;
+                const sqlQuery2 = "UPDATE UsuarioPaciente SET valPend = ? WHERE email = ?";
+                const queryValues2 = [nuevoTotal, emailPaciente];
 
-        const sqlQuery2 = "UPDATE UsuarioPaciente SET valPend = ? WHERE email = ?";
-        const queryValues2 = [nuevoTotal, emailPaciente];
-
-        conexion.query(sqlQuery2, queryValues2, function(err) {
-            if (err) reject(err);
+                conexion.query(sqlQuery2, queryValues2, function(err) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(`Valoración pendiente incrementada a ${nuevoTotal}`);
+                    }
+                });
+            }
         });
     });
 }
@@ -508,7 +516,7 @@ function obtenerFechasCorrespondientes(dias, cantidadDias) {
     return fechasCorrespondientes;
 }
 
-//PARA AGREGAR AUDITORIA EN EL FUTURO (SIN EXPORT, FUNCIONA SOLO EN BD, USUARIO RESPONSABLE SIN IMPLEMENTAR)
+//AUDITORIA (SIN EXPORT, FUNCIONA SOLO EN BD, USUARIO RESPONSABLE SIN IMPLEMENTAR)
 async function auditarCambio(cambio, usuario = null) {
     var textoCambio = cambio;
     
